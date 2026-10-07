@@ -1,0 +1,4 @@
+transaction_id,user_id,transaction_date,amount,status
+T-1,12,2026-10-01,20.5,Completed
+T-2,15,2026-10-01,3,Failed
+T-3,14,2026-10-02,5,Completed

@@ -839,6 +839,57 @@ tbody tr:hover {
   color: inherit;
   cursor: pointer;
 }
+.processing-banner,
+.layer-feedback {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: -2px 0 14px;
+  border: 1px solid #dfe7df;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f6faf6, #eef4f0);
+  color: #4f6657;
+  padding: 12px 13px;
+  font-size: 11px;
+  animation: slideIn 280ms ease both;
+}
+.processing-banner strong,
+.layer-feedback strong {
+  display: block;
+  color: #2d4438;
+  font-size: 11px;
+  font-weight: 700;
+}
+.processing-banner span,
+.layer-feedback span {
+  display: block;
+  color: #607066;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.processing-spinner {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: #edf4ee;
+  color: var(--green);
+  box-shadow: inset 0 0 0 1px rgba(112, 152, 118, 0.15);
+}
+.layer-feedback {
+  border-color: #e7d5ad;
+  background: linear-gradient(135deg, #faf7eb, #f3efe7);
+  color: #7d683f;
+}
+.layer-feedback svg {
+  flex: 0 0 auto;
+  color: #a27d3a;
+}
+.layer-feedback span {
+  color: #685c3d;
+}
 .history-list {
   display: grid;
 }
@@ -908,6 +959,16 @@ tbody tr:hover {
   from {
     opacity: 0;
     transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;

@@ -109,23 +109,58 @@ function normalizeRows(value, layerName) {
 
 function transformRows(rows, sourceName) {
   const timestamp = new Date().toISOString();
-  const bronze = rows.map((row) => ({
-    ...row,
-    ingestion_timestamp: row.ingestion_timestamp || timestamp,
-    raw_source: row.raw_source || sourceName,
-  }));
+  const bronze = rows.map((row, index) => {
+    const syntheticDate =
+      row.transaction_date ||
+      row.date ||
+      row.joinDate ||
+      row.createdAt ||
+      row.updatedAt ||
+      "";
+    const syntheticAmount =
+      row.amount ??
+      row.total ??
+      row.salary ??
+      row.value ??
+      row.revenue ??
+      row.price ??
+      null;
+    const syntheticId =
+      row.transaction_id || row.id || row.transactionId || `row-${index + 1}`;
+    const syntheticStatus =
+      row.status ||
+      (row.isActive === false
+        ? "Failed"
+        : row.isActive === true
+          ? "Completed"
+          : "");
+
+    return {
+      ...row,
+      transaction_id: syntheticId,
+      transaction_date: syntheticDate,
+      amount: syntheticAmount,
+      status: syntheticStatus,
+      ingestion_timestamp: row.ingestion_timestamp || timestamp,
+      raw_source: row.raw_source || sourceName,
+    };
+  });
+
   const silver = bronze.flatMap((row) => {
     const amountValue = Number(row.amount);
     const status = String(row.status ?? "").trim();
+    const transactionDate = String(row.transaction_date ?? "").trim();
+
     if (
       !row.transaction_id ||
-      !row.transaction_date ||
+      !transactionDate ||
       !status ||
       !Number.isFinite(amountValue) ||
       status.toLowerCase() === "failed"
     ) {
       return [];
     }
+
     return [
       {
         ...row,
@@ -135,6 +170,7 @@ function transformRows(rows, sourceName) {
             : Number(row.user_id),
         amount: amountValue,
         status,
+        transaction_date: transactionDate,
         is_clean: true,
       },
     ];
@@ -343,6 +379,25 @@ export default function App() {
     [layers.gold],
   );
 
+  const layerFeedback = useMemo(() => {
+    if (isProcessing) {
+      return "Processing your file into Bronze, Silver, and Gold layers...";
+    }
+    if (!layers.bronze.length) {
+      return "No raw records were detected. Upload a CSV or JSON file with rows or objects to generate the pipeline.";
+    }
+    if (!layers.silver.length && !layers.gold.length) {
+      return "No Silver or Gold data was created from this file. This often happens when the JSON is generic rather than transaction-based, but common fields such as amount, date, status, and id are auto-mapped when present.";
+    }
+    if (!layers.silver.length) {
+      return "Bronze data is present, but no valid Silver records were created. Check that the file includes usable date, amount, and status values.";
+    }
+    if (!layers.gold.length) {
+      return "Silver records exist, but no Gold aggregates were generated. The Gold layer groups records by date to create daily revenue summaries.";
+    }
+    return "";
+  }, [isProcessing, layers]);
+
   const tabTitle =
     activeTab === "ingest"
       ? "Data ingestion"
@@ -475,6 +530,25 @@ export default function App() {
               <button aria-label="Dismiss error" onClick={() => setError("")}>
                 <X size={16} />
               </button>
+            </div>
+          )}
+
+          {isProcessing && (
+            <div className="processing-banner" role="status">
+              <span className="processing-spinner">
+                <LoaderCircle className="spin" size={18} />
+              </span>
+              <div>
+                <strong>Processing dataset</strong>
+                <span>Normalizing Bronze, Silver, and Gold data…</span>
+              </div>
+            </div>
+          )}
+
+          {!isProcessing && layerFeedback && (
+            <div className="layer-feedback" role="status">
+              <AlertCircle size={17} />
+              <span>{layerFeedback}</span>
             </div>
           )}
 

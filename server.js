@@ -72,19 +72,51 @@ function normalizeRows(value, layerName) {
 function transformRows(rows, sourceName) {
   const timestamp = new Date().toISOString();
 
-  const bronze = rows.map((row) => ({
-    ...row,
-    ingestion_timestamp: row.ingestion_timestamp || timestamp,
-    raw_source: row.raw_source || sourceName,
-  }));
+  const bronze = rows.map((row, index) => {
+    const syntheticDate =
+      row.transaction_date ||
+      row.date ||
+      row.joinDate ||
+      row.createdAt ||
+      row.updatedAt ||
+      "";
+    const syntheticAmount =
+      row.amount ??
+      row.total ??
+      row.salary ??
+      row.value ??
+      row.revenue ??
+      row.price ??
+      null;
+    const syntheticId =
+      row.transaction_id || row.id || row.transactionId || `row-${index + 1}`;
+    const syntheticStatus =
+      row.status ||
+      (row.isActive === false
+        ? "Failed"
+        : row.isActive === true
+          ? "Completed"
+          : "");
+
+    return {
+      ...row,
+      transaction_id: syntheticId,
+      transaction_date: syntheticDate,
+      amount: syntheticAmount,
+      status: syntheticStatus,
+      ingestion_timestamp: row.ingestion_timestamp || timestamp,
+      raw_source: row.raw_source || sourceName,
+    };
+  });
 
   const silver = bronze.flatMap((row) => {
     const amountValue = Number(row.amount);
     const status = String(row.status ?? "").trim();
+    const transactionDate = String(row.transaction_date ?? "").trim();
 
     if (
       !row.transaction_id ||
-      !row.transaction_date ||
+      !transactionDate ||
       !status ||
       !Number.isFinite(amountValue) ||
       status.toLowerCase() === "failed"
@@ -101,6 +133,7 @@ function transformRows(rows, sourceName) {
             : Number(row.user_id),
         amount: amountValue,
         status,
+        transaction_date: transactionDate,
         is_clean: true,
       },
     ];
